@@ -51,21 +51,23 @@ PyInit_pyqml(void)
     if (PyType_Ready(&qmlengineType) < 0)
         return NULL;
 
-    /* QMLComponent */
+    /* QMLComponent
     qmlcomponentType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&qmlcomponentType) < 0)
         return NULL;
 
+
+    */
+
     m = PyModule_Create(&pyqmlmodule);
     if (m == NULL)
         return NULL;
-
     Py_INCREF(&qmlappType);
     Py_INCREF(&qmlengineType);
-    Py_INCREF(&qmlcomponentType);
+    //Py_INCREF(&qmlcomponentType);
     PyModule_AddObject(m, "QMLApplication", (PyObject*) &qmlappType);
     PyModule_AddObject(m, "QMLEngine", (PyObject*) &qmlengineType);
-    PyModule_AddObject(m, "QMLComponent", (PyObject*) &qmlcomponentType);
+    //PyModule_AddObject(m, "QMLComponent", (PyObject*) &qmlcomponentType);
     return m;
 }
 

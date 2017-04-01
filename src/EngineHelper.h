@@ -1,18 +1,18 @@
 #pragma once
 #ifndef QMLENGINE_H
 #define QMLENGINE_H
-#include <QtQml/QQmlEngine>
+#include <QtQml/QQmlApplicationEngine>
 #include <QtQml/QQmlComponent>
 
 
 /*
- * EngineHelper manages the engine run by the QMLApplication that hosts the QMLComponent(s)
+ * QmlEngine manages the engine run by the QMLApplication that hosts the QMLComponent(s)
  */
-class EngineHelper : public QQmlEngine
+class QmlEngine : public QQmlApplicationEngine
 {
     Q_OBJECT
 public:
-    EngineHelper();
+    QmlEngine();
     void addComponent(QQmlComponent *component);
     void scheduleDelete();
 
@@ -25,20 +25,20 @@ private:
     QList<QQmlComponent *> mComponents;
 };
 
-EngineHelper::EngineHelper() : QQmlEngine(), mDeleteScheduled(false)
+QmlEngine::QmlEngine() : QQmlApplicationEngine(), mDeleteScheduled(false)
 {
 
 }
 
 /* Add a QQmlComponenet to the engine */
-void EngineHelper::addComponent(QQmlComponent *component)
+void QmlEngine::addComponent(QQmlComponent *component)
 {
     mComponents.append(component);
     connect(component, SIGNAL(destroyed(QObject*)), this, SLOT(onComponentRemoved()));
 }
 
-/* Delete when the engine no longer has any QQmlComponents */
-void EngineHelper::scheduleDelete() {
+/* Delete when the engine when it no longer has any QQmlComponents */
+void QmlEngine::scheduleDelete() {
     if (mComponents.isEmpty()) {
         delete this;
     }
@@ -46,7 +46,7 @@ void EngineHelper::scheduleDelete() {
 }
 
 /* Remove component from the engine, if empty, we're safe to exit the engine */
-void EngineHelper::onComponentRemoved()
+void QmlEngine::onComponentRemoved()
 {
     mComponents.removeAll(qobject_cast<QQmlComponent*>(sender()));
     if (mComponents.isEmpty()) {

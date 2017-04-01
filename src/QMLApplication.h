@@ -4,7 +4,8 @@
 
 #include <Python.h>
 #include <QtWidgets/QApplication>
-
+#include <QtCore/QSettings>
+#include <QtQuickControls2/QQuickStyle>
 
 /* Create a QMLApplication type */
 typedef struct {
@@ -16,6 +17,10 @@ typedef struct {
 
 static PyObject* qmlapp_init(qmlappObject *self, PyObject *args)
 {
+    if (QApplication::instance()) {
+        PyErr_SetString(PyExc_RuntimeError, "A QApplication instance already exists.");
+        return NULL;
+    }
     PyObject* arg_vec;
     char** argv;
     int argc;
@@ -27,7 +32,18 @@ static PyObject* qmlapp_init(qmlappObject *self, PyObject *args)
 	for (int i = 0; i < argc; i++) {
 	    argv[i] = PyUnicode_AsUTF8(PySequence_GetItem(arg_vec, i));
 	}
+    QApplication::setApplicationName("Gallery");
+    QApplication::setOrganizationName("QtProject");
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication* qapp_tmp = new QApplication(argc, argv);
+    QSettings settings;
+    QString style = QQuickStyle::name();
+    if (!style.isEmpty()) {
+        settings.setValue("style", style);
+    } 
+    else {
+        QQuickStyle::setStyle(settings.value("style").toString());
+    }
     self->_qapp = PyCapsule_New(qapp_tmp, "qapp", NULL);
     return Py_None;
 }
@@ -39,7 +55,7 @@ static void qmlapp_dealloc(qmlappObject* self) {
 
 static PyObject* qmlapp_aboutQt(qmlappObject* self) {
     QApplication* qapp = (QApplication *) PyCapsule_GetPointer(self->_qapp, "qapp");
-    qapp->aboutQt();
+    QMetaObject::invokeMethod(qapp, "aboutQt");
     return Py_None;
 }
 
@@ -52,7 +68,7 @@ static PyObject* qmlapp_run(qmlappObject* self) {
 
 static PyMethodDef qmlapp_methods[] = {
     {"aboutQt", (PyCFunction)qmlapp_aboutQt, METH_NOARGS, "Show an about Qt dialog"},
-    {"run", (PyCFunction)qmlapp_aboutQt, METH_NOARGS, "Run the QML application"},
+    {"run", (PyCFunction)qmlapp_run, METH_NOARGS, "Run the QML application"},
     {NULL}  /* Sentinel */
 };
 

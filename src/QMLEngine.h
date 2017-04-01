@@ -4,7 +4,9 @@
 
 #include <Python.h>
 #include <QtWidgets/QApplication>
-#include <QtQml/QQmlEngine>
+#include <QtQml/QQmlApplicationEngine>
+#include <QtQml/QQmlContext>
+
 
 /* Create a QMLEngine type */
 typedef struct {
@@ -16,15 +18,24 @@ typedef struct {
 
 static PyObject* qmlengine_init(qmlengineObject *self, PyObject *args)
 {
-    QQmlEngine* engine = new QQmlEngine();
+    QQmlApplicationEngine* engine = new QQmlApplicationEngine();
     QObject::connect(engine, SIGNAL(quit()), QApplication::instance(), SLOT(quit()));
     self->_qengine = PyCapsule_New(engine, "qengine", NULL);
     return Py_None;
 }
 
 static void qmlengine_dealloc(qmlengineObject* self) {
-    QQmlEngine* qengine = (QQmlEngine *) PyCapsule_GetPointer(self->_qengine, "qengine");
+    QQmlApplicationEngine* qengine = (QQmlApplicationEngine *) PyCapsule_GetPointer(self->_qengine, "qengine");
+
+    while(true) {
+        QList<QObject *> rootObjs = qengine->rootObjects();
+        if (rootObjs.isEmpty()) {
+            break;
+        }
+        /* wait for completion of execution */
+    }
     delete qengine;
+    
 }
 
 static PyObject* qmlengine_add_import(qmlengineObject* self, PyObject* args) {
@@ -32,13 +43,44 @@ static PyObject* qmlengine_add_import(qmlengineObject* self, PyObject* args) {
     if (!PyArg_ParseTuple(args, "s", &path)) {
 		return NULL;
 	}
-    QQmlEngine* qengine = (QQmlEngine *) PyCapsule_GetPointer(self->_qengine, "qengine");
+    QQmlApplicationEngine* qengine = (QQmlApplicationEngine *) PyCapsule_GetPointer(self->_qengine, "qengine");
     qengine->addImportPath(path);
     return Py_None;
 }
 
+static PyObject* qmlengine_setresource(qmlengineObject* self, PyObject* args) {
+    char* path;
+    if (!PyArg_ParseTuple(args, "s", &path)) {
+		return NULL;
+	}
+	QResource::registerResource(QString(path));
+    return Py_None;
+}
+
+static PyObject* qmlengine_load(qmlengineObject* self, PyObject* args) {
+    char* path;
+    if (!PyArg_ParseTuple(args, "s", &path)) {
+		return NULL;
+	}
+	QFile* file = new QFile(QString(path));
+	if (!file->exists()) {
+	    char* err = (char*) malloc((22 + strlen(path)) * sizeof(char));
+	    strcpy(err, "File does not exist: ");
+	    strcpy(err, path);
+	    PyErr_SetString(PyExc_RuntimeError, err);
+	}
+    QQmlApplicationEngine* qengine = (QQmlApplicationEngine *) PyCapsule_GetPointer(self->_qengine, "qengine");
+    qengine->load(QUrl::fromLocalFile(file->fileName()));
+    if (qengine->rootObjects().isEmpty()) {
+        return NULL;
+    }
+    return Py_None;
+}
+
 static PyMethodDef qmlengine_methods[] = {
-    {"add_import", (PyCFunction)qmlengine_add_import, METH_VARARGS, "Add a path to search for QML import files"},
+    {"add_import", (PyCFunction)qmlengine_add_import, METH_VARARGS, "Add a path to search for QML import files."},
+    {"load", (PyCFunction)qmlengine_load, METH_VARARGS, "Load a QML file for the engine to execute."},
+    {"set_resource", (PyCFunction)qmlengine_setresource, METH_VARARGS, "Set the resource file to load project files."},
     {NULL}  /* Sentinel */
 };
 
