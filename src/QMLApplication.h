@@ -3,9 +3,13 @@
 #define QMLAPPLICATION_H
 
 #include <Python.h>
+#include <QtCore/QtGlobal>
 #include <QtWidgets/QApplication>
 #include <QtCore/QSettings>
-#include <QtQuickControls2/QQuickStyle>
+#if QT_VERSION > QT_VERSION_CHECK(5, 7, 0)
+    #include <QtQuickControls2/QQuickStyle>
+#endif
+
 
 /* Create a QMLApplication type */
 typedef struct {
@@ -37,6 +41,8 @@ static PyObject* qmlapp_init(qmlappObject *self, PyObject *args)
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication* qapp_tmp = new QApplication(argc, argv);
     QSettings settings;
+    // if we are using QtQuickControls2, take care of styles
+    #if QT_VERSION > QT_VERSION_CHECK(5, 7, 0)
     QString style = QQuickStyle::name();
     if (!style.isEmpty()) {
         settings.setValue("style", style);
@@ -44,6 +50,7 @@ static PyObject* qmlapp_init(qmlappObject *self, PyObject *args)
     else {
         QQuickStyle::setStyle(settings.value("style").toString());
     }
+    #endif
     self->_qapp = PyCapsule_New(qapp_tmp, "qapp", NULL);
     return Py_None;
 }

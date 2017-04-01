@@ -38,9 +38,16 @@ class QMakeHelper:
     def libraries(self) -> str:
         return self._qmake['QT_INSTALL_LIBS'].strip()
 
+    @property
+    def version(self) -> str:
+        return self._qmake['QT_VERSION'].strip()
+
 q = QMakeHelper()
+libs = ['Qt5Core', 'Qt5Gui', 'Qt5Widgets', 'Qt5Quick', 'Qt5Qml']
+if '5.7' in q.version:
+    libs.append('Qt5QuickControls2')
 pyqml = Extension("pyqml", ["src/pyqml.cc"], include_dirs=[q.headers],
-                  libraries=['Qt5Core', 'Qt5Gui', 'Qt5Widgets', 'Qt5Quick', 'Qt5Qml', 'Qt5QuickControls2'],
+                  libraries=libs,
                   library_dirs=[q.libraries],
                   extra_compile_args=['/Zi'],
                   extra_link_args=['/DEBUG'])
